@@ -1,4 +1,6 @@
 CREATE TABLE IF NOT EXISTS alerts (
+    team__id uuid,
+    domain__id bigint,
     type text,
     time_utc timestamp without time zone,
     id uuid,
@@ -78,6 +80,8 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 
 CREATE TABLE IF NOT EXISTS events (
+    team__id uuid,
+    domain__id bigint,
     type text,
     time_utc timestamp without time zone,
     id uuid,

@@ -56,7 +56,7 @@ func (c *Client) BulkInsert(items []event.Item) error {
 		}
 	}
 	for _, item := range items {
-		insertStmt := item.InsertStatement(item.Columns())
+		insertStmt := item.InsertStatement(item.TableName(), item.Columns())
 		batch, ok := batches[insertStmt]
 		if !ok {
 			tx, err := c.conn.Begin()
@@ -75,7 +75,8 @@ func (c *Client) BulkInsert(items []event.Item) error {
 			}
 			batches[insertStmt] = batch
 		}
-		_, err := batch.stmt.Exec(item.Values()...)
+
+		_, err := batch.stmt.Exec(item.Values(item.Columns())...)
 		if err != nil {
 			rollback()
 			return err

@@ -2,7 +2,6 @@ package event
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -10,7 +9,17 @@ import (
 	js "github.com/itimofeev/go-util/json"
 )
 
+const (
+	domainID     = 45
+	teamID       = "d72452fc-1587-4786-b28b-9fe449d026ed"
+	macroEventID = "19178c2a-894b-4f06-9f0f-213ec15ebaa3"
+)
+
 var alertsColumns = []string{"id",
+	"team__id",
+	"domain__id",
+	"type",
+	"time_utc",
 	"alert_id",
 	"version",
 	"datetime",
@@ -82,6 +91,8 @@ var alertsColumns = []string{"id",
 	"reason_mask",
 }
 var columns = []string{
+	"team__id",
+	"domain__id",
 	"type",
 	"time_utc",
 	"id",
@@ -129,29 +140,35 @@ var columns = []string{
 }
 
 type Item interface {
-	InsertStatement(columns []string) string
+	InsertStatement(tableName string, columns []string) string
 	Columns() []string
-	Values() []interface{}
+	Values(columns []string) []interface{}
 	TableName() string
 }
 
-type Event js.Object
+type Event struct {
+	js.Object
+}
+
+func NewEvent(obj js.Object) Event {
+	return Event{obj}
+}
 
 func (e Event) TableName() string {
 	return "events"
 }
 
-func (e Event) Values() []interface{} {
+func (e Event) Values(columns []string) []interface{} {
 	values := make([]interface{}, 0, len(columns))
 	for _, column := range columns {
-		values = append(values, e[column])
+		values = append(values, e.Object[column])
 	}
 	return values
 }
 
-func (e Event) InsertStatement(columns []string) string {
+func (e Event) InsertStatement(tableName string, columns []string) string {
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-		e.TableName(),
+		tableName,
 		strings.Join(columns, ","),
 		placeholdersString(len(columns)),
 	)
@@ -161,7 +178,13 @@ func (e Event) Columns() []string {
 	return columns
 }
 
-type AlertEvent Event
+type AlertEvent struct {
+	Event
+}
+
+func NewAlertEvent(evt js.Object) AlertEvent {
+	return AlertEvent{Event{Object: evt}}
+}
 
 func (e AlertEvent) TableName() string {
 	return "alerts"
@@ -170,81 +193,87 @@ func (e AlertEvent) Columns() []string {
 	return alertsColumns
 }
 
-func DummyAlertEvent(evtTime time.Time, detectorEventID string) AlertEvent {
+func DummyAlertEvent(id string, evtTime time.Time, detectorEventID string, serverID int) (AlertEvent, string) {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
-	evt["id"] = uuid.New().String()
+	evt["id"] = id
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
 	evt["version"] = 1
 	evt["type"] = "alert"
 	evt["datetime"] = evtTimeStr
 	evt["time_utc"] = evtTimeStrUtc
-	addDummySource(evt, false)
+	addDummySource(evt, serverID, false)
 	evt["initiator"] = "root"
 	evt["initiator_type"] = "AIT_USER"
 	evt["reviewer"] = "root"
 	evt["reason_mask"] = 4
-	evt["detector_event_id"] = detectorEventID[0]
+	evt["detector_event_id"] = detectorEventID
 	evt["detector_event_type"] = "faceAppeared"
-	evt["macro_event_id"] = uuid.New().String()
+	evt["macro_event_id"] = macroEventID
 	enrichTime(evt)
-	return AlertEvent(evt)
+	return NewAlertEvent(evt), id
 }
 
-func DummyAlertEventState(evtTime time.Time, alertType, alertID string) AlertEvent {
+func DummyAlertEventState(id string, evtTime time.Time, alertType, alertID string, serverID int) AlertEvent {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
-	evt["id"] = uuid.New().String()
+	evt["id"] = id
 	evt["version"] = 1
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
 	evt["type"] = "alert_state"
-	evt["domain__id"] = rand.Int63()
 	evt["datetime"] = evtTimeStr
 	evt["time_utc"] = evtTimeStrUtc
-	addDummySource(evt, false)
+	addDummySource(evt, serverID, false)
 	evt["severity"] = alertType
 	evt["reviewer_type"] = "RT_USER"
 	evt["reviewer"] = "root"
 	evt["state"] = "ST_CLOSED"
 	evt["alert_id"] = alertID
-	addDummyBookmark(evt)
+	addDummyBookmark(evt, serverID, alertID)
 	enrichTime(evt)
-	return AlertEvent(evt)
+	return NewAlertEvent(evt)
 }
 
-func DummyFaceAppearedEvent(evtTime time.Time) Event {
+func DummyFaceAppearedEvent(evtTime time.Time, serverID int) (Event, string) {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
-	evt["id"] = uuid.New().String()
+	id := uuid.New().String()
+	evt["id"] = id
 	evt["version"] = 1
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
 	evt["type"] = "detector"
 	evt["datetime"] = evtTimeStr
 	evt["time_utc"] = evtTimeStrUtc
-	addDummySource(evt, true)
+	addDummySource(evt, serverID, true)
 	evt["detector_type"] = "faceAppeared"
-	evt["detector_face_age"] = rand.Intn(100)
-	evt["detector_face_gender"] = rand.Intn(3)
+	evt["detector_face_age"] = 34
+	evt["detector_face_gender"] = 2
 	evt["detector_face_time_begin"] = evtTimeStr
 	evt["detector_face_time_begin_utc"] = evtTimeStrUtc
 	evt["detector_people_state"] = "in"
 	evt["phase"] = "happened"
-	evt["detector_queue_max"] = rand.Intn(20)
-	evt["recognition_quality"] = rand.Float64()
+	evt["detector_queue_max"] = 2
+	evt["recognition_quality"] = 0.45
 	evt["detector_listedItem_list_id"] = "bfefb72f-235a-414f-afe7-5303f9d2e50e"
 	evt["detector_listedItem_item_id"] = "7a9b3866-8901-4260-9826-470ce34c4219"
 	addDummyRectangle(evt)
 	evt["detector_listedItem_matched_event_time_utc"] = time.Date(2019, 9, 26, 9, 9, 9, 729000000, time.UTC).Format("2006-01-02T15:04:05.000000")
 	evt["multi_phase_id"] = uuid.New().String()
 	enrichTime(evt)
-	return Event(evt)
+	return NewEvent(evt), id
 }
 
-func addDummySource(event js.Object, withDetector bool) {
-	event["server_id"] = "SERVER"
-	event["server_name"] = "someServer"
+func addDummySource(event js.Object, serverID int, withDetector bool) {
+	event["server_id"] = fmt.Sprintf("SERVER%d", serverID)
+	event["server_name"] = fmt.Sprintf("someServer:%d", serverID)
 
-	event["camera_id"] = "HOST/DeviceIpint.1/SourceEndpoint.video:0:0"
+	event["camera_id"] = "SERVER0/DeviceIpint.1/SourceEndpoint.video:0:0"
 	event["camera_name"] = "someCamera"
 
 	if withDetector {
@@ -254,34 +283,34 @@ func addDummySource(event js.Object, withDetector bool) {
 }
 
 func addDummyRectangle(event js.Object) {
-	event["rectangle_h"] = rand.Float64()
-	event["rectangle_w"] = rand.Float64()
-	event["rectangle_x"] = rand.Float64()
-	event["rectangle_y"] = rand.Float64()
-	event["rectangle_index"] = rand.Intn(32)
+	event["rectangle_h"] = 0.3
+	event["rectangle_w"] = 0.3
+	event["rectangle_x"] = 0.4
+	event["rectangle_y"] = 0.3
+	event["rectangle_index"] = 1
 }
 
-func addDummyBookmark(evt js.Object) {
+func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evtTime := time.Now()
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt["bookmark_time_datetime"] = evtTimeStr
 	evt["bookmark_time_utc"] = evtTimeStrUtc
-	evt["bookmark_server_id"] = "SERVER"
-	evt["bookmark_server_name"] = "someServer"
-	evt["bookmark_camera_id"] = "HOST/DeviceIpint.1/SourceEndpoint.video:0:0"
+	evt["bookmark_server_id"] = fmt.Sprintf("SERVER%d", serverID)
+	evt["bookmark_server_name"] = fmt.Sprintf("someServer%d", serverID)
+	evt["bookmark_camera_id"] = "SERVER0/DeviceIpint.1/SourceEndpoint.video:0:0"
 	evt["bookmark_camera_name"] = "someCamera"
 	evt["bookmark_id"] = uuid.New().String()
 	evt["bookmark_message"] = "test message"
 	evt["bookmark_is_protected"] = 1
 	evt["bookmark_user"] = "root"
-	evt["bookmark_alert_id"] = uuid.New().String()
+	evt["bookmark_alert_id"] = alertID
 	evt["bookmark_group_id"] = uuid.New().String()
-	evt["bookmark_boundary_x"] = rand.Float64()
-	evt["bookmark_boundary_y"] = rand.Float64()
-	evt["bookmark_boundary_w"] = rand.Float64()
-	evt["bookmark_boundary_h"] = rand.Float64()
-	evt["bookmark_boundary_index"] = rand.Intn(32)
+	evt["bookmark_boundary_x"] = 0.2
+	evt["bookmark_boundary_y"] = 0.3
+	evt["bookmark_boundary_w"] = 0.4
+	evt["bookmark_boundary_h"] = 0.5
+	evt["bookmark_boundary_index"] = 1
 	evt["bookmark_geometry_alpha"] = 147
 	evt["bookmark_geometry_id"] = uuid.New().String()
 	evt["bookmark_geometry_type"] = "PT_ELLIPSE"

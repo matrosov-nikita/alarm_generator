@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -12,13 +13,18 @@ import (
 
 func main() {
 	var startDateStr, endDateStr string
-	count := 100000
-	flag.IntVar(&count, "count", 100000, "Events count to generate")
+	var alertsCount, serversCount int
+	flag.IntVar(&alertsCount, "alertsCount", 2000, "Alerts count to generate for one server")
+	flag.IntVar(&serversCount, "servers", 4, "Servers count")
 	flag.StringVar(&startDateStr, "startDate", "2020-01-01", "Start date for events generation")
 	flag.StringVar(&endDateStr, "endDate", "", "End date for events generation")
 	flag.Parse()
-	if count <= 0 {
+	if alertsCount <= 0 {
 		log.Fatal("events count must be positive")
+	}
+
+	if serversCount <= 0 {
+		log.Fatal("servers count must be positive")
 	}
 
 	client, err := postgres.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
@@ -45,7 +51,10 @@ func main() {
 		}
 	}
 
-	gen := generator.New(client, startDate, endDate, count)
+	fmt.Printf("alertsCount=%d\nstartDate=%s\nendDate=%s\nserversCount=%d\n",
+		alertsCount, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), serversCount)
+
+	gen := generator.New(client, startDate, endDate, alertsCount, serversCount)
 	startTime := time.Now()
 	if err := gen.LoadEvents(); err != nil {
 		log.Fatalf("failed to load events to db: %+v", err)
