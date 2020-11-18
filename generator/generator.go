@@ -73,7 +73,7 @@ func (g *Generator) prepareEvents() []event.Item {
 	faceAppearedTime := alertRaiseTime.Add(timeElapsedBeforeDetectorEvent)
 	alertStateTime := alertRaiseTime.Add(timeElapsedBeforeAlertStateChanged)
 
-	events := make([]event.Item, 0, 3*g.serversCount)
+	events := make([]event.Item, 0, 2*g.serversCount+1)
 	faceAppearedEvent, faceAppearedEventID := event.DummyFaceAppearedEvent(faceAppearedTime, 0)
 
 	events = append(events, faceAppearedEvent)
