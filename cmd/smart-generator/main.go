@@ -6,21 +6,26 @@ import (
 	"log"
 	"time"
 
-	"github.com/matrosov-nikita/alarm_generator/generator"
+	"github.com/matrosov-nikita/smart-generator/pkg/config"
 
-	"github.com/matrosov-nikita/alarm_generator/postgres"
+	"github.com/matrosov-nikita/smart-generator/generator"
+
+	"github.com/matrosov-nikita/smart-generator/pkg/postgres"
 )
 
 func main() {
 	var startDateStr, endDateStr string
-	var alertsCount, serversCount int
-	flag.IntVar(&alertsCount, "alertsCount", 2000, "Alerts count to generate for one server")
+	var serversCount int
+	var configPath string
 	flag.IntVar(&serversCount, "servers", 4, "Servers count")
+	flag.StringVar(&configPath, "configPath", "./config.json", "path to config file")
 	flag.StringVar(&startDateStr, "startDate", "2020-01-01", "Start date for events generation")
 	flag.StringVar(&endDateStr, "endDate", "", "End date for events generation")
 	flag.Parse()
-	if alertsCount <= 0 {
-		log.Fatal("events count must be positive")
+
+	detectorConfig, err := config.LoadConfig(configPath)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	if serversCount <= 0 {
@@ -51,14 +56,10 @@ func main() {
 		}
 	}
 
-	fmt.Printf("alertsCount=%d\nstartDate=%s\nendDate=%s\nserversCount=%d\n",
-		alertsCount, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), serversCount)
-
-	gen := generator.New(client, startDate, endDate, alertsCount, serversCount)
+	fmt.Printf("startDate=%s\nendDate=%s\nserversCount=%d\ndetectorConfig=%+v\n", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), serversCount, detectorConfig)
+	gen := generator.New(client, startDate, endDate, serversCount, detectorConfig)
 	startTime := time.Now()
-	if err := gen.LoadEvents(); err != nil {
-		log.Fatalf("failed to load events to db: %+v", err)
-	}
+	gen.Run()
 	timeElapsed := time.Since(startTime)
 	log.Printf("Loading successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
 }

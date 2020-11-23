@@ -1,4 +1,4 @@
-module github.com/matrosov-nikita/alarm_generator
+module github.com/matrosov-nikita/smart-generator
 
 go 1.14
 

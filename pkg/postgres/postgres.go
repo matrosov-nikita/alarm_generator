@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 
-	"github.com/matrosov-nikita/alarm_generator/event"
+	"github.com/matrosov-nikita/smart-generator/events"
 
 	"github.com/lib/pq"
 )
@@ -47,7 +49,7 @@ func (c *Client) GetConnection() *sql.DB {
 }
 
 // BulkInsert groups bulk items by insert statement into batches and writes them into storage
-func (c *Client) BulkInsert(items []event.Item) error {
+func (c *Client) BulkInsert(items []*events.Event) error {
 	batches := make(map[string]*bulkBatch)
 	rollback := func() {
 		for _, b := range batches {
@@ -56,7 +58,7 @@ func (c *Client) BulkInsert(items []event.Item) error {
 		}
 	}
 	for _, item := range items {
-		insertStmt := item.InsertStatement(item.TableName(), item.Columns())
+		insertStmt := insertStatement(item.Columns, item.TableName)
 		batch, ok := batches[insertStmt]
 		if !ok {
 			tx, err := c.conn.Begin()
@@ -64,7 +66,7 @@ func (c *Client) BulkInsert(items []event.Item) error {
 				rollback()
 				return err
 			}
-			stmt, err := tx.Prepare(pq.CopyIn(item.TableName(), item.Columns()...))
+			stmt, err := tx.Prepare(pq.CopyIn(item.TableName, item.Columns...))
 			if err != nil {
 				rollback()
 				return err
@@ -76,7 +78,7 @@ func (c *Client) BulkInsert(items []event.Item) error {
 			batches[insertStmt] = batch
 		}
 
-		_, err := batch.stmt.Exec(item.Values(item.Columns())...)
+		_, err := batch.stmt.Exec(item.Values...)
 		if err != nil {
 			rollback()
 			return err
@@ -128,7 +130,23 @@ func (c *Client) RunInTransaction(fn func(*sql.Tx) error) error {
 	return tx.Commit()
 }
 
+func insertStatement(columns []string, tableName string) string {
+	/* #nosec */
+	return fmt.Sprintf(`INSERT INTO %s ("%s") VALUES (%s)`,
+		tableName,
+		strings.Join(columns, `","`),
+		placeholdersString(len(columns)))
+}
+
 // GetName returns storage name
 func (c *Client) GetName() string {
 	return "postgres"
+}
+
+func placeholdersString(count int) string {
+	if count == 0 {
+		return ""
+	}
+	placeholders := strings.Repeat("?,", count)
+	return placeholders[:len(placeholders)-1]
 }

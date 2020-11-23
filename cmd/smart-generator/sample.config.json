@@ -1,0 +1,23 @@
+{
+  "alerts": 100000,
+  "faceAppeared": 1000,
+  "plateRecognized": 1000,
+  "People": 1000,
+  "listed_face_detected": 1000,
+  "listed_lpr_detected": 1000,
+  "QueueDetected": 1000,
+  "QueueLength": 1000,
+  "oneLine": 1000,
+  "peopleDistance": 1000,
+  "EvasionDetected": 1000,
+  "bodyTemperature": 1000,
+  "NoHeadSegment": 1000,
+  "lotsObjects": 1000,
+  "NoBodySegment": 1000,
+  "NoHipsSegment": 1000,
+  "NoHandSegment": 1000,
+  "NoFootSegment": 1000,
+  "NoOtherSegment": 1000,
+  "bodyPreTemperature": 1000
+}
+

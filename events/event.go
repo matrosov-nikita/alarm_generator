@@ -1,7 +1,8 @@
-package event
+package events
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ const (
 	domainID     = 45
 	teamID       = "d72452fc-1587-4786-b28b-9fe449d026ed"
 	macroEventID = "19178c2a-894b-4f06-9f0f-213ec15ebaa3"
+	letterBytes  = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 )
 
 var alertsColumns = []string{"id",
@@ -123,6 +125,9 @@ var columns = []string{
 	"phase",
 	"multi_phase_id",
 	"recognition_quality",
+	"detector_people_state",
+	"detector_queue_max",
+	"detector_queue_min",
 	"detector_face_age",
 	"detector_face_gender",
 	"detector_face_time_begin",
@@ -132,68 +137,56 @@ var columns = []string{
 	"rectangle_x",
 	"rectangle_y",
 	"rectangle_index",
+	"detector_lpr_direction",
+	"detector_lpr_country",
+	"detector_lpr_plate",
+	"detector_lpr_best_datetime",
+	"detector_lpr_best_utc",
+	"detector_lpr_begin_datetime",
+	"detector_lpr_begin_utc",
+	"detector_lpr_end_datetime",
+	"detector_lpr_end_utc",
+	"detector_temperature_time_begin",
+	"detector_temperature_time_begin_utc",
+	"detector_temperature_value",
+	"detector_temperature_unit",
 	"camera_display_id",
 	"camera_group_id",
 	"camera_group_name",
 	"utc_offset",
 	"object_class",
-}
-
-type Item interface {
-	InsertStatement(tableName string, columns []string) string
-	Columns() []string
-	Values(columns []string) []interface{}
-	TableName() string
+	"detector_listedItem_matched_event_time_utc",
+	"detector_listedItem_matched_event_time_datetime",
+	"detector_listedItem_matched_event_id",
+	"detector_listedItem_list_id",
+	"detector_listedItem_item_id",
+	"detector_listedFace_score",
 }
 
 type Event struct {
-	js.Object
+	Columns   []string
+	Values    []interface{}
+	TableName string
 }
 
-func NewEvent(obj js.Object) Event {
-	return Event{obj}
-}
-
-func (e Event) TableName() string {
-	return "events"
-}
-
-func (e Event) Values(columns []string) []interface{} {
-	values := make([]interface{}, 0, len(columns))
-	for _, column := range columns {
-		values = append(values, e.Object[column])
+func NewEvent(evt js.Object, tableName string) *Event {
+	eventColumns := columns
+	if tableName == "alerts" {
+		eventColumns = alertsColumns
 	}
-	return values
+	values := make([]interface{}, 0, len(columns))
+	for _, column := range eventColumns {
+		values = append(values, evt[column])
+	}
+
+	return &Event{
+		Columns:   eventColumns,
+		Values:    values,
+		TableName: tableName,
+	}
 }
 
-func (e Event) InsertStatement(tableName string, columns []string) string {
-	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-		tableName,
-		strings.Join(columns, ","),
-		placeholdersString(len(columns)),
-	)
-}
-
-func (e Event) Columns() []string {
-	return columns
-}
-
-type AlertEvent struct {
-	Event
-}
-
-func NewAlertEvent(evt js.Object) AlertEvent {
-	return AlertEvent{Event{Object: evt}}
-}
-
-func (e AlertEvent) TableName() string {
-	return "alerts"
-}
-func (e AlertEvent) Columns() []string {
-	return alertsColumns
-}
-
-func DummyAlertEvent(id string, evtTime time.Time, detectorEventID string, serverID int) (AlertEvent, string) {
+func NewAlertEvent(id string, evtTime time.Time, detectorEventID string, serverID int) (*Event, string) {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
@@ -213,10 +206,10 @@ func DummyAlertEvent(id string, evtTime time.Time, detectorEventID string, serve
 	evt["detector_event_type"] = "faceAppeared"
 	evt["macro_event_id"] = macroEventID
 	enrichTime(evt)
-	return NewAlertEvent(evt), id
+	return NewEvent(evt, "alerts"), id
 }
 
-func DummyAlertEventState(id string, evtTime time.Time, alertType, alertID string, serverID int) AlertEvent {
+func NewAlertEventState(id string, evtTime time.Time, alertType, alertID string, serverID int) *Event {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
@@ -235,10 +228,108 @@ func DummyAlertEventState(id string, evtTime time.Time, alertType, alertID strin
 	evt["alert_id"] = alertID
 	addDummyBookmark(evt, serverID, alertID)
 	enrichTime(evt)
-	return NewAlertEvent(evt)
+	return NewEvent(evt, "alerts")
 }
 
-func DummyFaceAppearedEvent(evtTime time.Time, serverID int) (Event, string) {
+func NewPeopleEvent(evtTime time.Time, serverID int) (*Event, string) {
+	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
+	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
+	evt := js.NewObject()
+	id := uuid.New().String()
+	evt["id"] = id
+	evt["version"] = 1
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
+	evt["type"] = "detector"
+	evt["datetime"] = evtTimeStr
+	evt["time_utc"] = evtTimeStrUtc
+	evt["detector_type"] = "People"
+	evt["detector_people_state"] = "in"
+	evt["phase"] = "happened"
+	addDummySource(evt, serverID, true)
+	enrichTime(evt)
+	return NewEvent(evt, "events"), id
+}
+
+func NewQueueDetectedEvent(evtTime time.Time, serverID int) (*Event, string) {
+	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
+	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
+	evt := js.NewObject()
+	id := uuid.New().String()
+	evt["id"] = id
+	evt["version"] = 1
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
+	evt["type"] = "detector"
+	evt["datetime"] = evtTimeStr
+	evt["time_utc"] = evtTimeStrUtc
+	evt["detector_type"] = "QueueDetected"
+	evt["detector_queue_max"] = 3
+	evt["detector_queue_min"] = 3
+	evt["phase"] = "happened"
+	addDummySource(evt, serverID, true)
+	enrichTime(evt)
+	return NewEvent(evt, "events"), id
+}
+
+func NewPlateRecognizedEvent(evtTime time.Time, serverID int) (*Event, string) {
+	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
+	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
+	evt := js.NewObject()
+	id := uuid.New().String()
+	evt["id"] = id
+	evt["version"] = 1
+	evt["type"] = "detector"
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
+	evt["datetime"] = evtTimeStr
+	evt["time_utc"] = evtTimeStrUtc
+	addDummySource(evt, serverID, true)
+	evt["detector_type"] = "plateRecognized"
+	evt["detector_lpr_country"] = "ru"
+	evt["detector_lpr_direction"] = 1
+	evt["detector_lpr_plate"] = randString(8)
+	evt["phase"] = "happened"
+	evt["detector_lpr_best_utc"] = evtTimeStrUtc
+	evt["detector_lpr_begin_datetime"] = evtTimeStr
+	evt["detector_lpr_begin_utc"] = evtTimeStrUtc
+	evt["detector_lpr_begin_datetime"] = evtTimeStr
+	evt["detector_lpr_end_datetime"] = evtTimeStr
+	evt["detector_lpr_end_utc"] = evtTimeStrUtc
+	addDummyRectangle(evt)
+	evt["recognition_quality"] = 0.45
+	enrichTime(evt)
+	return NewEvent(evt, "events"), id
+}
+
+func NewListedLprEvent(evtTime time.Time, serverID int) (*Event, string) {
+	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
+	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
+	evt := js.NewObject()
+	id := uuid.New().String()
+	evt["id"] = id
+	evt["version"] = 1
+	evt["type"] = "detector"
+	evt["domain__id"] = domainID
+	evt["team__id"] = teamID
+	evt["datetime"] = evtTimeStr
+	evt["time_utc"] = evtTimeStrUtc
+	addDummySource(evt, serverID, true)
+	evt["detector_type"] = "listed_lpr_detected"
+	evt["detector_lpr_plate"] = randString(8)
+	evt["phase"] = "happened"
+	evt["detector_listedItem_list_id"] = "25580957-8639-459d-86a1-724f4e772956"
+	evt["detector_listedItem_item_id"] = uuid.New().String()
+	evt["detector_listedItem_matched_event_id"] = uuid.New().String()
+	evt["detector_listedItem_matched_event_time_datetime"] = evtTimeStr
+	evt["detector_listedItem_matched_event_time_utc"] = evtTimeStrUtc
+
+	addDummyRectangle(evt)
+	enrichTime(evt)
+	return NewEvent(evt, "events"), id
+}
+
+func NewFaceAppearedEvent(evtTime time.Time, serverID int) (*Event, string) {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
 	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
 	evt := js.NewObject()
@@ -256,8 +347,6 @@ func DummyFaceAppearedEvent(evtTime time.Time, serverID int) (Event, string) {
 	evt["detector_face_gender"] = 2
 	evt["detector_face_time_begin"] = evtTimeStr
 	evt["detector_face_time_begin_utc"] = evtTimeStrUtc
-	evt["detector_people_state"] = "in"
-	evt["phase"] = "happened"
 	evt["detector_queue_max"] = 2
 	evt["recognition_quality"] = 0.45
 	evt["detector_listedItem_list_id"] = "bfefb72f-235a-414f-afe7-5303f9d2e50e"
@@ -266,7 +355,7 @@ func DummyFaceAppearedEvent(evtTime time.Time, serverID int) (Event, string) {
 	evt["detector_listedItem_matched_event_time_utc"] = time.Date(2019, 9, 26, 9, 9, 9, 729000000, time.UTC).Format("2006-01-02T15:04:05.000000")
 	evt["multi_phase_id"] = uuid.New().String()
 	enrichTime(evt)
-	return NewEvent(evt), id
+	return NewEvent(evt, "events"), id
 }
 
 func addDummySource(event js.Object, serverID int, withDetector bool) {
@@ -353,15 +442,11 @@ func enrichTime(event js.Object) {
 	event.Put("hour_x4", hourX4*4)
 }
 
-func placeholdersString(count int) string {
-	if count == 0 {
-		return ""
+func randString(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
-
-	placeholders := make([]string, count)
-	for i := range placeholders {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-	}
-
-	return strings.Join(placeholders, ",")
+	return string(b)
 }
