@@ -1,4 +1,22 @@
 {
-  "alerts": 20
+  "alerts": 10,
+  "faceAppeared": 10,
+  "plateRecognized": 10,
+  "People": 10,
+  "listed_face_detected": 10,
+  "listed_lpr_detected": 10,
+  "QueueDetected": 10,
+  "QueueLength": 10,
+  "oneLine": 10,
+  "peopleDistance": 10,
+  "EvasionDetected": 10,
+  "bodyTemperature": 10,
+  "NoHeadSegment": 10,
+  "lotsObjects": 10,
+  "NoBodySegment": 10,
+  "NoHipsSegment": 10,
+  "NoHandSegment": 10,
+  "NoFootSegment": 10,
+  "NoOtherSegment": 10
 }
 
