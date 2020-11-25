@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	js "github.com/itimofeev/go-util/json"
 
-	"github.com/matrosov-nikita/smart-generator/events"
+	"github.com/google/uuid"
 )
 
 const batchSize = 200
 
 type Client interface {
-	BulkInsert(items []*events.Event) error
+	BulkInsert(items []js.Object) error
 }
 
 type Supplier struct {
@@ -83,7 +83,7 @@ func (s *Supplier) worker(wg *sync.WaitGroup) {
 }
 
 func (s *Supplier) pushEvents(job *job) error {
-	batch := make([]*events.Event, 0, batchSize)
+	batch := make([]js.Object, 0, batchSize)
 	inBatch, total := 0, 0
 	for i := 0; i < job.eventsAmount; i++ {
 		serversEvents := job.generateDetectorEvents(s.GetTime())
@@ -96,7 +96,7 @@ func (s *Supplier) pushEvents(job *job) error {
 			}
 			total += inBatch
 			log.Printf("batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, job.teamID, total)
-			batch = make([]*events.Event, 0, batchSize)
+			batch = make([]js.Object, 0, batchSize)
 			inBatch = 0
 		}
 	}

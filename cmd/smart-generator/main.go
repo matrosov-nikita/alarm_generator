@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/matrosov-nikita/smart-generator/pkg/client/db"
+
 	"github.com/matrosov-nikita/smart-generator/pkg/config"
 
 	"github.com/matrosov-nikita/smart-generator/generator"
-
-	"github.com/matrosov-nikita/smart-generator/pkg/client/postgres"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 		log.Fatal("teams count must be positive")
 	}
 
-	client, err := postgres.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
+	client, err := db.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
 	if err != nil {
 		log.Fatalf("failed to create postgres client: %+v", err)
 	}

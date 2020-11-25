@@ -1,4 +1,4 @@
-package postgres
+package db
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/matrosov-nikita/smart-generator/events"
+	js "github.com/itimofeev/go-util/json"
 
 	"github.com/lib/pq"
 )
@@ -49,7 +49,7 @@ func (c *Client) GetConnection() *sql.DB {
 }
 
 // BulkInsert groups bulk items by insert statement into batches and writes them into storage
-func (c *Client) BulkInsert(items []*events.Event) error {
+func (c *Client) BulkInsert(events []js.Object) error {
 	batches := make(map[string]*bulkBatch)
 	rollback := func() {
 		for _, b := range batches {
@@ -57,6 +57,8 @@ func (c *Client) BulkInsert(items []*events.Event) error {
 			_ = b.tx.Rollback()
 		}
 	}
+
+	items := convertEvents(events)
 	for _, item := range items {
 		insertStmt := insertStatement(item.Columns, item.TableName)
 		batch, ok := batches[insertStmt]

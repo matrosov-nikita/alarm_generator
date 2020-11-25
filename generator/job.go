@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"time"
 
+	js "github.com/itimofeev/go-util/json"
+
 	"github.com/google/uuid"
 	"github.com/matrosov-nikita/smart-generator/events"
 )
@@ -18,10 +20,10 @@ type job struct {
 	domainID     int
 }
 
-func (j *job) generateDetectorEvents(raiseTime time.Time) []*events.Event {
-	var ev *events.Event
+func (j *job) generateDetectorEvents(raiseTime time.Time) []js.Object {
+	var ev js.Object
 	eventsGenerator := events.NewGenerator(j.teamID, j.domainID)
-	var eventGenerators = map[string]func(time.Time, int) (*events.Event, string){
+	var eventGenerators = map[string]func(time.Time, int) (js.Object, string){
 		"faceAppeared":         eventsGenerator.CreateFaceAppearedEvent,
 		"plateRecognized":      eventsGenerator.CreatePlateRecognizedEvent,
 		"listed_lpr_detected":  eventsGenerator.CreateListedLprEvent,
@@ -52,10 +54,10 @@ func (j *job) generateDetectorEvents(raiseTime time.Time) []*events.Event {
 		ev, _ = generator(raiseTime, 0)
 	}
 
-	return []*events.Event{ev}
+	return []js.Object{ev}
 }
 
-func (j *job) generateAlerts(alertRaiseTime time.Time) []*events.Event {
+func (j *job) generateAlerts(alertRaiseTime time.Time) []js.Object {
 	eventsGenerator := events.NewGenerator(j.teamID, j.domainID)
 
 	alertSeverities := []string{"True", "False", "Missed", "Suspicious"}
@@ -66,7 +68,7 @@ func (j *job) generateAlerts(alertRaiseTime time.Time) []*events.Event {
 	faceAppearedTime := alertRaiseTime.Add(timeElapsedBeforeDetectorEvent)
 	alertStateTime := alertRaiseTime.Add(timeElapsedBeforeAlertStateChanged)
 
-	alertsEvents := make([]*events.Event, 0, 2*j.serversCount+1)
+	alertsEvents := make([]js.Object, 0, 2*j.serversCount+1)
 	faceAppearedEvent, faceAppearedEventID := eventsGenerator.CreateFaceAppearedEvent(faceAppearedTime, 0)
 
 	alertsEvents = append(alertsEvents, faceAppearedEvent)
@@ -74,7 +76,7 @@ func (j *job) generateAlerts(alertRaiseTime time.Time) []*events.Event {
 	for i := 0; i < j.serversCount; i++ {
 		alertEvent, alertID := eventsGenerator.CreateAlertEvent(alertID, alertRaiseTime, faceAppearedEventID, i)
 		alertStateEvent := eventsGenerator.CreateAlertEventState(alertStateTime, alertStateSeverity, alertID, i)
-		alertsEvents = append(alertsEvents, []*events.Event{alertEvent, alertStateEvent}...)
+		alertsEvents = append(alertsEvents, []js.Object{alertEvent, alertStateEvent}...)
 	}
 
 	return alertsEvents
