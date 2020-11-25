@@ -16,14 +16,16 @@ import (
 )
 
 func main() {
-	var startDateStr, endDateStr string
+	var startDateStr, endDateStr, generatorType string
 	var serversCount, teamsCount int
 	var configPath string
+	// TODO: move this to config
 	flag.IntVar(&serversCount, "servers", 4, "Servers count")
 	flag.IntVar(&teamsCount, "teams", 10, "Teams count")
 	flag.StringVar(&configPath, "configPath", "./config.json", "path to config file")
 	flag.StringVar(&startDateStr, "startDate", "2020-01-01", "Start date for events generation")
 	flag.StringVar(&endDateStr, "endDate", "", "End date for events generation")
+	flag.StringVar(&generatorType, "generatorType", "normal", "Specifies how to generate time seq for events")
 	flag.Parse()
 
 	detectorConfig, err := config.LoadConfig(configPath)
@@ -68,13 +70,13 @@ func main() {
 	}
 
 	fmt.Printf("startDate=%s\nendDate=%s\nserversCount=%d\ndetectorConfig=%+v\n", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), serversCount, detectorConfig)
-	gen := generator.New(client, startDate, endDate, serversCount, teamsCount, detectorConfig)
+	gen := generator.New(client, startDate, endDate, serversCount, teamsCount, generatorType, detectorConfig)
 	startTime := time.Now()
 	gen.Run()
 	timeElapsed := time.Since(startTime)
 	log.Printf("Loading to POSTGRES successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
 
-	gen = generator.New(chClient, startDate, endDate, serversCount, teamsCount, detectorConfig)
+	gen = generator.New(chClient, startDate, endDate, serversCount, teamsCount, generatorType, detectorConfig)
 	startTime = time.Now()
 	gen.Run()
 	timeElapsed = time.Since(startTime)

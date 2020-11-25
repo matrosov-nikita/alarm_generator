@@ -19,17 +19,18 @@ type Client interface {
 }
 
 type Supplier struct {
-	*timeGenerator
-	serversCount   int
-	teams          []string
-	domains        []int
-	client         Client
-	detectorConfig map[string]int
+	*randomTimeGenerator
+	serversCount      int
+	teams             []string
+	domains           []int
+	client            Client
+	detectorConfig    map[string]int
+	timeGeneratorType string
 
 	jobs chan *job
 }
 
-func New(client Client, startDate, endDate time.Time, serversCount, teamsCount int, detectorConfig map[string]int) *Supplier {
+func New(client Client, startDate, endDate time.Time, serversCount, teamsCount int, timeGeneratorType string, detectorConfig map[string]int) *Supplier {
 	teams := make([]string, 0, teamsCount)
 	domains := make([]int, 0, teamsCount)
 	for i := 0; i < teamsCount; i++ {
@@ -38,13 +39,14 @@ func New(client Client, startDate, endDate time.Time, serversCount, teamsCount i
 	}
 
 	return &Supplier{
-		timeGenerator:  NewTimeGenerator(startDate, endDate),
-		serversCount:   serversCount,
-		client:         client,
-		teams:          teams,
-		domains:        domains,
-		detectorConfig: detectorConfig,
-		jobs:           make(chan *job, len(detectorConfig)),
+		randomTimeGenerator: newRandomTimeGenerator(startDate, endDate),
+		serversCount:        serversCount,
+		client:              client,
+		teams:               teams,
+		domains:             domains,
+		detectorConfig:      detectorConfig,
+		jobs:                make(chan *job, len(detectorConfig)),
+		timeGeneratorType:   timeGeneratorType,
 	}
 }
 
@@ -85,8 +87,9 @@ func (s *Supplier) worker(wg *sync.WaitGroup) {
 func (s *Supplier) pushEvents(job *job) error {
 	batch := make([]js.Object, 0, batchSize)
 	inBatch, total := 0, 0
+	timeGenerator := NewGenerator(s.timeGeneratorType, s.from, s.to, int64(job.eventsAmount))
 	for i := 0; i < job.eventsAmount; i++ {
-		serversEvents := job.generateDetectorEvents(s.GetTime())
+		serversEvents := job.generateDetectorEvents(timeGenerator.GetTime())
 		batch = append(batch, serversEvents...)
 		inBatch += len(serversEvents)
 
