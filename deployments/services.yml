@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: generator
       PGDATA : /var/lib/postgresql/data
     volumes:
-      - ../assets/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../assets/postgres_init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
@@ -23,9 +23,29 @@ services:
         delay: 10s
       restart_policy:
         condition: on-failure
+  clickhouse:
+    image: yandex/clickhouse-server:20.8.7.15
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
+    networks:
+      - backend
+    volumes:
+      - ../assets/clickhouse_init.sql:/docker-entrypoint-initdb.d/clickhouse_init.sql
+      - clickhouse_data:/var/lib/clickhouse
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
 
 volumes:
   postgres_data:
+    driver: local
+  clickhouse_data:
     driver: local
 
 networks:

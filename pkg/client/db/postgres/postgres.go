@@ -1,10 +1,12 @@
-package db
+package postgres
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/matrosov-nikita/smart-generator/pkg/client/db"
 
 	js "github.com/itimofeev/go-util/json"
 
@@ -58,7 +60,7 @@ func (c *Client) BulkInsert(events []js.Object) error {
 		}
 	}
 
-	items := convertEvents(events)
+	items := db.ConvertEvents(events)
 	for _, item := range items {
 		insertStmt := insertStatement(item.Columns, item.TableName)
 		batch, ok := batches[insertStmt]
@@ -149,6 +151,11 @@ func placeholdersString(count int) string {
 	if count == 0 {
 		return ""
 	}
-	placeholders := strings.Repeat("?,", count)
-	return placeholders[:len(placeholders)-1]
+
+	placeholders := make([]string, count)
+	for i := range placeholders {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+
+	return strings.Join(placeholders, ",")
 }

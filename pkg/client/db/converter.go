@@ -1,6 +1,8 @@
 package db
 
-import js "github.com/itimofeev/go-util/json"
+import (
+	js "github.com/itimofeev/go-util/json"
+)
 
 type Event struct {
 	Columns   []string
@@ -8,7 +10,7 @@ type Event struct {
 	TableName string
 }
 
-func convertEvents(events []js.Object) []Event {
+func ConvertEvents(events []js.Object) []Event {
 	dbEvents := make([]Event, 0, len(events))
 	var eventColumns []string
 	var tableName string

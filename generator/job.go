@@ -41,7 +41,6 @@ func (j *job) generateDetectorEvents(raiseTime time.Time) []js.Object {
 	switch j.detector {
 	case "alerts":
 		alerts := j.generateAlerts(raiseTime)
-		log.Println("LEN", len(alerts), j.serversCount)
 		return alerts
 	case "NoBodySegment", "NoHipsSegment", "NoHandSegment", "NoFootSegment", "NoOtherSegment", "NoHeadSegment":
 		ev, _ = eventsGenerator.CreateEquipmentEvent(raiseTime, 0, j.detector)

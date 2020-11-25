@@ -6,7 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/matrosov-nikita/smart-generator/pkg/client/db"
+	"github.com/matrosov-nikita/smart-generator/pkg/client/db/clickhouse"
+
+	"github.com/matrosov-nikita/smart-generator/pkg/client/db/postgres"
 
 	"github.com/matrosov-nikita/smart-generator/pkg/config"
 
@@ -37,11 +39,15 @@ func main() {
 		log.Fatal("teams count must be positive")
 	}
 
-	client, err := db.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
+	client, err := postgres.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
 	if err != nil {
 		log.Fatalf("failed to create postgres client: %+v", err)
 	}
 
+	chClient, err := clickhouse.NewClient("tcp://127.0.0.1:9000?debug=false")
+	if err != nil {
+		log.Fatalf("failed to create clickhouse client: %+v", err)
+	}
 	defer func() {
 		if err := client.Close(); err != nil {
 			log.Fatal(err)
@@ -66,5 +72,11 @@ func main() {
 	startTime := time.Now()
 	gen.Run()
 	timeElapsed := time.Since(startTime)
-	log.Printf("Loading successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
+	log.Printf("Loading to POSTGRES successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
+
+	gen = generator.New(chClient, startDate, endDate, serversCount, teamsCount, detectorConfig)
+	startTime = time.Now()
+	gen.Run()
+	timeElapsed = time.Since(startTime)
+	log.Printf("Loading to CLICKHOUSE successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
 }
