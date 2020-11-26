@@ -73,7 +73,7 @@ func (e *Generator) CreateAlertEventState(evtTime time.Time, alertType, alertID 
 
 func (e *Generator) CreatePeopleEvent(evtTime time.Time, serverID int) (js.Object, string) {
 	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
-	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
+	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -81,8 +81,8 @@ func (e *Generator) CreatePeopleEvent(evtTime time.Time, serverID int) (js.Objec
 	evt["domain__id"] = e.domainID
 	evt["team__id"] = e.teamID
 	evt["type"] = "detector"
-	evt["datetime"] = evtTimeStr
-	evt["time_utc"] = evtTimeStrUtc
+	evt["datetime"] = datetime
+	evt["time_utc"] = evtTime.UTC()
 	evt["detector_type"] = "People"
 	evt["detector_people_state"] = "in"
 	evt["phase"] = "happened"
@@ -173,7 +173,7 @@ func (e *Generator) CreateListedLprEvent(evtTime time.Time, serverID int) (js.Ob
 	evt["type"] = "detector"
 	evt["domain__id"] = e.domainID
 	evt["team__id"] = e.teamID
-	evt["datetime"] = evtTimeStr
+	evt["datetime"] = datetime
 	evt["time_utc"] = evtTime.UTC()
 	addDummySource(evt, serverID, true)
 	evt["detector_type"] = "listed_lpr_detected"
@@ -208,7 +208,7 @@ func (e *Generator) CreateListedFaceEvent(evtTime time.Time, serverID int) (js.O
 	evt["detector_listedItem_list_id"] = "4b63054f-4b82-40b9-88dc-800ae26e76f9"
 	evt["detector_listedItem_item_id"] = uuid.New().String()
 	evt["detector_listedItem_matched_event_id"] = uuid.New().String()
-	evt["detector_listedItem_matched_event_time_datetime"] = evtTimeStr
+	evt["detector_listedItem_matched_event_time_datetime"] = datetime
 	evt["detector_listedItem_matched_event_time_utc"] = evtTime.UTC()
 	evt["detector_listedFace_score"] = 0.5
 	addDummyRectangle(evt)
@@ -388,10 +388,8 @@ func addDummyRectangle(event js.Object) {
 
 func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evtTime := time.Now()
-	evtTimeStr := evtTime.Format("2006-01-02T15:04:05.000000")
-	evtTimeStrUtc := evtTime.UTC().Format("2006-01-02T15:04:05.000000")
-	evt["bookmark_time_datetime"] = evtTimeStr
-	evt["bookmark_time_utc"] = evtTimeStrUtc
+	evt["bookmark_time_datetime"] = evtTime.Format("2006-01-02T15:04:05")
+	evt["bookmark_time_utc"] = evtTime.UTC()
 	evt["bookmark_server_id"] = fmt.Sprintf("SERVER%d", serverID)
 	evt["bookmark_server_name"] = fmt.Sprintf("someServer%d", serverID)
 	evt["bookmark_camera_id"] = "SERVER0/DeviceIpint.1/SourceEndpoint.video:0:0"
@@ -414,8 +412,8 @@ func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evt["bookmark_geometry_ellipse_center_y"] = 4
 	evt["bookmark_geometry_ellipse_yr"] = 4.5
 	evt["bookmark_geometry_ellipse_xr"] = 4.5
-	evt["bookmark_range_time_begin"] = evtTimeStrUtc
-	evt["bookmark_range_time_end"] = evtTimeStrUtc
+	evt["bookmark_range_time_begin"] = evtTime.UTC()
+	evt["bookmark_range_time_end"] = evtTime.Add(3 * time.Second).UTC()
 }
 
 func enrichTime(event js.Object) {

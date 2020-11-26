@@ -75,9 +75,8 @@ func (s *Supplier) Run() {
 
 func (s *Supplier) worker(wg *sync.WaitGroup) {
 	for j := range s.jobs {
-		log.Printf("Got new job: %+v\n", j)
 		if err := s.pushEvents(j); err != nil {
-			log.Printf("failed to load events: %+v", err)
+			log.Printf("failed to load events for job: %+v: %+v", err, j)
 		}
 	}
 

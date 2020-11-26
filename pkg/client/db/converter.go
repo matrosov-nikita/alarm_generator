@@ -15,7 +15,7 @@ func ConvertEvents(events []js.Object) []Event {
 	var eventColumns []string
 	var tableName string
 	for _, event := range events {
-		switch event.GetFieldAsString("type") {
+		switch event.GetFieldAsString("detector_type") {
 		case "alert", "alert_state":
 			tableName = "alerts"
 			eventColumns = alertsColumns
@@ -23,7 +23,7 @@ func ConvertEvents(events []js.Object) []Event {
 			tableName = "events"
 			eventColumns = columns
 		}
-		values := make([]interface{}, 0, len(columns))
+		values := make([]interface{}, 0, len(eventColumns))
 		for _, column := range eventColumns {
 			values = append(values, event[column])
 		}
@@ -38,7 +38,9 @@ func ConvertEvents(events []js.Object) []Event {
 	return dbEvents
 }
 
-var alertsColumns = []string{"id",
+// 74 columns
+var alertsColumns = []string{
+	"id",
 	"team__id",
 	"domain__id",
 	"type",
@@ -113,6 +115,8 @@ var alertsColumns = []string{"id",
 	"initiator_type",
 	"reason_mask",
 }
+
+// 68 columns
 var columns = []string{
 	"team__id",
 	"domain__id",
