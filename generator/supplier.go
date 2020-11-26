@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const batchSize = 200
+const batchSize = 5000
 
 type Client interface {
 	BulkInsert(items []js.Object) error
@@ -59,13 +59,15 @@ func (s *Supplier) Run() {
 
 	for i, team := range s.teams {
 		for detector, eventsAmount := range s.detectorConfig {
-			s.jobs <- &job{
+			j := &job{
 				detector:     detector,
 				eventsAmount: eventsAmount,
 				teamID:       team,
 				domainID:     s.domains[i],
 				serversCount: s.serversCount,
 			}
+
+			s.jobs <- j
 		}
 	}
 

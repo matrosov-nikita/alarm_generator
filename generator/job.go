@@ -11,7 +11,7 @@ import (
 	"github.com/matrosov-nikita/smart-generator/events"
 )
 
-// TODO: create different job types (e.g. Detector Job, Alerts Job, Vehicle Job)
+// TODO: create different job polymorphic types (e.g. Detector Job, Alerts Job, Vehicle Job)
 type job struct {
 	detector     string
 	eventsAmount int

@@ -77,9 +77,6 @@ func (c *Client) BulkInsert(events []js.Object) error {
 
 		_, err := batch.stmt.Exec(item.Values...)
 		if err != nil {
-			for i, value := range item.Values {
-				log.Println("COLUMN", item.Columns[i], "VALUE", value)
-			}
 			rollback()
 			return err
 		}

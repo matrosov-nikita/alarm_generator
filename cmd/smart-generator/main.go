@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -15,70 +14,65 @@ import (
 	"github.com/matrosov-nikita/smart-generator/generator"
 )
 
+const (
+	ClickhouseURL = "tcp://127.0.0.1:9000?debug=false"
+	PostgresURL   = "postgresql://postgres@127.0.0.1:5432/generator?sslmode=disable"
+)
+
 func main() {
-	var startDateStr, endDateStr, generatorType string
-	var serversCount, teamsCount int
-	var configPath string
-	// TODO: move this to config
-	flag.IntVar(&serversCount, "servers", 4, "Servers count")
-	flag.IntVar(&teamsCount, "teams", 10, "Teams count")
-	flag.StringVar(&configPath, "configPath", "./config.json", "path to config file")
-	flag.StringVar(&startDateStr, "startDate", "2020-01-01", "Start date for events generation")
-	flag.StringVar(&endDateStr, "endDate", "", "End date for events generation")
-	flag.StringVar(&generatorType, "generatorType", "normal", "Specifies how to generate time seq for events")
+	cfg := &config.Config{}
+	flag.IntVar(&cfg.ServersCount, "servers", 1, "Servers count")
+	flag.IntVar(&cfg.TeamsCount, "teams", 2, "Teams count")
+	flag.StringVar(&cfg.DetectorsConfigPath, "detectorsConfigPath", "./config.json", "Path to file stores amount events per detector")
+	flag.StringVar(&cfg.StartDateStr, "startDate", "2020-01-01", "Start date for events generation")
+	flag.StringVar(&cfg.EndDateStr, "endDate", "", "End date for events generation, default: now")
+	flag.StringVar(&cfg.TimeGeneratorType, "generatorType", "normal", "Generate type for time seq for events: normal or random")
+	flag.StringVar(&cfg.StorageType, "storageType", "all", "clickhouse, postgres, all")
 	flag.Parse()
 
-	detectorConfig, err := config.LoadConfig(configPath)
-	if err != nil {
+	if err := cfg.ParseFields(); err != nil {
 		log.Fatal(err)
 	}
 
-	if serversCount <= 0 {
-		log.Fatal("servers count must be positive")
-	}
-
-	if teamsCount <= 0 {
-		log.Fatal("teams count must be positive")
-	}
-
-	client, err := postgres.NewClient("postgresql://postgres:postgres@127.0.0.1:5432/generator?sslmode=disable")
+	log.Printf("start with config: %+v", cfg)
+	pgClient, err := postgres.NewClient(PostgresURL)
 	if err != nil {
 		log.Fatalf("failed to create postgres client: %+v", err)
 	}
 
-	chClient, err := clickhouse.NewClient("tcp://127.0.0.1:9000?debug=false")
+	chClient, err := clickhouse.NewClient(ClickhouseURL)
 	if err != nil {
 		log.Fatalf("failed to create clickhouse client: %+v", err)
 	}
 	defer func() {
-		if err := client.Close(); err != nil {
+		if err := pgClient.Close(); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	startDate, err := time.Parse("2006-01-02", startDateStr)
-	if err != nil {
-		log.Fatal("dates must be at YYYY-MM-DD format")
-	}
-
-	endDate := time.Now()
-	if endDateStr != "" {
-		endDate, err = time.Parse("2006-01-02", endDateStr)
-		if err != nil {
-			log.Fatal("dates must be at YYYY-MM-DD format")
+	defer func() {
+		if err := chClient.Close(); err != nil {
+			log.Fatal(err)
 		}
-	}
+	}()
 
-	fmt.Printf("startDate=%s\nendDate=%s\nserversCount=%d\ndetectorConfig=%+v\n", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), serversCount, detectorConfig)
-	gen := generator.New(client, startDate, endDate, serversCount, teamsCount, generatorType, detectorConfig)
+	switch cfg.StorageType {
+	case "clickhouse":
+		runGeneratorWithClient(cfg.StorageType, chClient, cfg)
+	case "postgres":
+		runGeneratorWithClient(cfg.StorageType, pgClient, cfg)
+	case "all":
+		log.Printf("%+v", cfg)
+		runGeneratorWithClient("clickhouse", chClient, cfg)
+		runGeneratorWithClient("postgres", pgClient, cfg)
+	}
+}
+
+func runGeneratorWithClient(storageType string, client generator.Client, cfg *config.Config) {
+	gen := generator.New(client, cfg.StartDate, cfg.EndDate, cfg.ServersCount, cfg.TeamsCount,
+		cfg.TimeGeneratorType, cfg.Detectors)
 	startTime := time.Now()
 	gen.Run()
 	timeElapsed := time.Since(startTime)
-	log.Printf("Loading to POSTGRES successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
-
-	gen = generator.New(chClient, startDate, endDate, serversCount, teamsCount, generatorType, detectorConfig)
-	startTime = time.Now()
-	gen.Run()
-	timeElapsed = time.Since(startTime)
-	log.Printf("Loading to CLICKHOUSE successfully completed, time elapsed %.3f sec.", timeElapsed.Seconds())
+	log.Printf("Loading to %s successfully completed, time elapsed %.3f sec.", storageType, timeElapsed.Seconds())
 }
