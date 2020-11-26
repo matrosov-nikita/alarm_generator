@@ -15,7 +15,8 @@ func ConvertEvents(events []js.Object) []Event {
 	var eventColumns []string
 	var tableName string
 	for _, event := range events {
-		switch event.GetFieldAsString("detector_type") {
+		eventType := event.GetFieldAsString("type")
+		switch eventType {
 		case "alert", "alert_state":
 			tableName = "alerts"
 			eventColumns = alertsColumns

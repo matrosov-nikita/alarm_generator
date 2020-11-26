@@ -16,6 +16,11 @@ type Client struct {
 	conn *sql.DB
 }
 
+type bulkBatch struct {
+	tx   *sql.Tx
+	stmt *sql.Stmt
+}
+
 func NewClient(url string) (*Client, error) {
 	conn, err := sql.Open("clickhouse", url)
 	if err != nil {
@@ -38,36 +43,63 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// BulkInsert groups bulk items by insert statement into batches and writes them into storage
 func (c *Client) BulkInsert(events []js.Object) error {
-	if len(events) == 0 {
-		return nil
+	batches := make(map[string]*bulkBatch)
+	rollback := func() {
+		for _, b := range batches {
+			_ = b.stmt.Close()
+			_ = b.tx.Rollback()
+		}
 	}
 
 	items := db.ConvertEvents(events)
-
-	tx, err := c.conn.Begin()
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare(insertStatement(items[0].Columns, items[0].TableName))
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := stmt.Close(); err != nil {
-			log.Printf("statement close failed: %v\n", err)
-		}
-	}()
-
 	for _, item := range items {
-		if _, err := stmt.Exec(item.Values...); err != nil {
-			_ = tx.Rollback()
+		insertStmt := insertStatement(item.Columns, item.TableName)
+		batch, ok := batches[insertStmt]
+		if !ok {
+			tx, err := c.conn.Begin()
+			if err != nil {
+				rollback()
+				return err
+			}
+			stmt, err := tx.Prepare(insertStmt)
+			if err != nil {
+				rollback()
+				return err
+			}
+			batch = &bulkBatch{
+				tx:   tx,
+				stmt: stmt,
+			}
+			batches[insertStmt] = batch
+		}
+
+		_, err := batch.stmt.Exec(item.Values...)
+		if err != nil {
+			for i, value := range item.Values {
+				log.Println("COLUMN", item.Columns[i], "VALUE", value)
+			}
+			rollback()
 			return err
 		}
 	}
 
-	return tx.Commit()
+	var err error
+	for insertStmt, batch := range batches {
+		delete(batches, insertStmt)
+		if err = batch.tx.Commit(); err != nil {
+			_ = batch.stmt.Close()
+			break
+		}
+		if err = batch.stmt.Close(); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		rollback()
+	}
+	return err
 }
 
 func insertStatement(columns []string, tableName string) string {

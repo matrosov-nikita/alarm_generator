@@ -388,7 +388,8 @@ func addDummyRectangle(event js.Object) {
 
 func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evtTime := time.Now()
-	evt["bookmark_time_datetime"] = evtTime.Format("2006-01-02T15:04:05")
+	datetime := evt.GetFieldAsTime("datetime", "2006-01-02T15:04:05")
+	evt["bookmark_time_datetime"] = datetime
 	evt["bookmark_time_utc"] = evtTime.UTC()
 	evt["bookmark_server_id"] = fmt.Sprintf("SERVER%d", serverID)
 	evt["bookmark_server_name"] = fmt.Sprintf("someServer%d", serverID)
@@ -408,8 +409,8 @@ func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evt["bookmark_geometry_alpha"] = 147
 	evt["bookmark_geometry_id"] = uuid.New().String()
 	evt["bookmark_geometry_type"] = "PT_ELLIPSE"
-	evt["bookmark_geometry_ellipse_center_x"] = 2
-	evt["bookmark_geometry_ellipse_center_y"] = 4
+	evt["bookmark_geometry_ellipse_center_x"] = 2.0
+	evt["bookmark_geometry_ellipse_center_y"] = 4.0
 	evt["bookmark_geometry_ellipse_yr"] = 4.5
 	evt["bookmark_geometry_ellipse_xr"] = 4.5
 	evt["bookmark_range_time_begin"] = evtTime.UTC()
