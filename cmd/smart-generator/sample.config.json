@@ -1,5 +1,4 @@
 {
-  "alerts": 100000,
   "faceAppeared": 1000,
   "plateRecognized": 1000,
   "People": 1000,
@@ -18,5 +17,8 @@
   "NoHandSegment": 1000,
   "NoFootSegment": 1000,
   "NoOtherSegment": 1000,
+
+  "vehicles": 100,
+  "alerts": 100
 }
 

@@ -3,9 +3,12 @@ package generator
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/matrosov-nikita/smart-generator/generator/job"
 
 	js "github.com/itimofeev/go-util/json"
 
@@ -18,6 +21,13 @@ type Client interface {
 	BulkInsert(items []js.Object) error
 }
 
+type supplierTask struct {
+	detector     string
+	eventsAmount int
+	teamID       string
+	domainID     int
+}
+
 type Supplier struct {
 	*randomTimeGenerator
 	serversCount      int
@@ -27,7 +37,7 @@ type Supplier struct {
 	detectorConfig    map[string]int
 	timeGeneratorType string
 
-	jobs chan *job
+	tasks chan *supplierTask
 }
 
 func New(client Client, startDate, endDate time.Time, serversCount, teamsCount int, timeGeneratorType string, detectorConfig map[string]int) *Supplier {
@@ -45,12 +55,14 @@ func New(client Client, startDate, endDate time.Time, serversCount, teamsCount i
 		teams:               teams,
 		domains:             domains,
 		detectorConfig:      detectorConfig,
-		jobs:                make(chan *job, len(detectorConfig)),
+		tasks:               make(chan *supplierTask, len(detectorConfig)),
 		timeGeneratorType:   timeGeneratorType,
 	}
 }
 
 func (s *Supplier) Run() {
+	rand.Seed(time.Now().UnixNano())
+
 	var wg sync.WaitGroup
 	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)
@@ -59,24 +71,23 @@ func (s *Supplier) Run() {
 
 	for i, team := range s.teams {
 		for detector, eventsAmount := range s.detectorConfig {
-			j := &job{
+			j := &supplierTask{
 				detector:     detector,
 				eventsAmount: eventsAmount,
 				teamID:       team,
 				domainID:     s.domains[i],
-				serversCount: s.serversCount,
 			}
 
-			s.jobs <- j
+			s.tasks <- j
 		}
 	}
 
-	close(s.jobs)
+	close(s.tasks)
 	wg.Wait()
 }
 
 func (s *Supplier) worker(wg *sync.WaitGroup) {
-	for j := range s.jobs {
+	for j := range s.tasks {
 		if err := s.pushEvents(j); err != nil {
 			log.Printf("failed to load events for job: %+v: %+v", err, j)
 		}
@@ -85,12 +96,13 @@ func (s *Supplier) worker(wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (s *Supplier) pushEvents(job *job) error {
+func (s *Supplier) pushEvents(task *supplierTask) error {
 	batch := make([]js.Object, 0, batchSize)
 	inBatch, total := 0, 0
-	timeGenerator := NewGenerator(s.timeGeneratorType, s.from, s.to, int64(job.eventsAmount))
-	for i := 0; i < job.eventsAmount; i++ {
-		serversEvents := job.generateDetectorEvents(timeGenerator.GetTime())
+	timeGenerator := NewGenerator(s.timeGeneratorType, s.from, s.to, int64(task.eventsAmount))
+	for i := 0; i < task.eventsAmount; i++ {
+		j := job.NewJob(task.detector, task.teamID, task.domainID, s.serversCount)
+		serversEvents := j.GenerateEvents(timeGenerator.GetTime())
 		batch = append(batch, serversEvents...)
 		inBatch += len(serversEvents)
 
@@ -99,7 +111,7 @@ func (s *Supplier) pushEvents(job *job) error {
 				return err
 			}
 			total += inBatch
-			log.Printf("batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, job.teamID, total)
+			log.Printf("batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, task.teamID, total)
 			batch = make([]js.Object, 0, batchSize)
 			inBatch = 0
 		}
@@ -110,7 +122,7 @@ func (s *Supplier) pushEvents(job *job) error {
 			return err
 		}
 		total += inBatch
-		fmt.Printf("final batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, job.teamID, total)
+		fmt.Printf("final batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, task.teamID, total)
 	}
 
 	return nil

@@ -62,7 +62,6 @@ func main() {
 	case "postgres":
 		runGeneratorWithClient(cfg.StorageType, pgClient, cfg)
 	case "all":
-		log.Printf("%+v", cfg)
 		runGeneratorWithClient("clickhouse", chClient, cfg)
 		runGeneratorWithClient("postgres", pgClient, cfg)
 	}
