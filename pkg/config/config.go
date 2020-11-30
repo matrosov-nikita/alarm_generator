@@ -12,6 +12,7 @@ import (
 type Config struct {
 	ServersCount        int
 	TeamsCount          int
+	BatchSize           int
 	DetectorsConfigPath string
 	StartDateStr        string
 	StartDate           time.Time

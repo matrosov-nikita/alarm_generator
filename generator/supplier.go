@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/matrosov-nikita/smart-generator/pkg/config"
+
 	"github.com/matrosov-nikita/smart-generator/generator/job"
 
 	js "github.com/itimofeev/go-util/json"
 
 	"github.com/google/uuid"
 )
-
-const batchSize = 5000
 
 type Client interface {
 	BulkInsert(items []js.Object) error
@@ -36,27 +36,29 @@ type Supplier struct {
 	client            Client
 	detectorConfig    map[string]int
 	timeGeneratorType string
+	batchSize         int
 
 	tasks chan *supplierTask
 }
 
-func New(client Client, startDate, endDate time.Time, serversCount, teamsCount int, timeGeneratorType string, detectorConfig map[string]int) *Supplier {
-	teams := make([]string, 0, teamsCount)
-	domains := make([]int, 0, teamsCount)
-	for i := 0; i < teamsCount; i++ {
+func New(client Client, cfg *config.Config) *Supplier {
+	teams := make([]string, 0, cfg.TeamsCount)
+	domains := make([]int, 0, cfg.TeamsCount)
+	for i := 0; i < cfg.TeamsCount; i++ {
 		teams = append(teams, uuid.New().String())
 		domains = append(domains, i)
 	}
 
 	return &Supplier{
-		randomTimeGenerator: newRandomTimeGenerator(startDate, endDate),
-		serversCount:        serversCount,
+		randomTimeGenerator: newRandomTimeGenerator(cfg.StartDate, cfg.EndDate),
+		serversCount:        cfg.ServersCount,
 		client:              client,
 		teams:               teams,
 		domains:             domains,
-		detectorConfig:      detectorConfig,
-		tasks:               make(chan *supplierTask, len(detectorConfig)),
-		timeGeneratorType:   timeGeneratorType,
+		detectorConfig:      cfg.Detectors,
+		tasks:               make(chan *supplierTask, len(cfg.Detectors)),
+		timeGeneratorType:   cfg.TimeGeneratorType,
+		batchSize:           cfg.BatchSize,
 	}
 }
 
@@ -97,7 +99,7 @@ func (s *Supplier) worker(wg *sync.WaitGroup) {
 }
 
 func (s *Supplier) pushEvents(task *supplierTask) error {
-	batch := make([]js.Object, 0, batchSize)
+	batch := make([]js.Object, 0, s.batchSize)
 	inBatch, total := 0, 0
 	timeGenerator := NewGenerator(s.timeGeneratorType, s.from, s.to, int64(task.eventsAmount))
 	for i := 0; i < task.eventsAmount; i++ {
@@ -106,13 +108,13 @@ func (s *Supplier) pushEvents(task *supplierTask) error {
 		batch = append(batch, serversEvents...)
 		inBatch += len(serversEvents)
 
-		if inBatch >= batchSize {
+		if inBatch >= s.batchSize {
 			if err := s.client.BulkInsert(batch); err != nil {
 				return err
 			}
 			total += inBatch
 			log.Printf("batch with [%d] entities for team [%s] was written, total: [%d]\n", inBatch, task.teamID, total)
-			batch = make([]js.Object, 0, batchSize)
+			batch = make([]js.Object, 0, s.batchSize)
 			inBatch = 0
 		}
 	}

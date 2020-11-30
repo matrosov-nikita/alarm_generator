@@ -23,6 +23,7 @@ func main() {
 	cfg := &config.Config{}
 	flag.IntVar(&cfg.ServersCount, "servers", 1, "Servers count")
 	flag.IntVar(&cfg.TeamsCount, "teams", 2, "Teams count")
+	flag.IntVar(&cfg.BatchSize, "batchSize", 100, "Batch size")
 	flag.StringVar(&cfg.DetectorsConfigPath, "detectorsConfigPath", "./config.json", "Path to file stores amount events per detector")
 	flag.StringVar(&cfg.StartDateStr, "startDate", "2020-01-01", "Start date for events generation")
 	flag.StringVar(&cfg.EndDateStr, "endDate", "", "End date for events generation, default: now")
@@ -68,8 +69,7 @@ func main() {
 }
 
 func runGeneratorWithClient(storageType string, client generator.Client, cfg *config.Config) {
-	gen := generator.New(client, cfg.StartDate, cfg.EndDate, cfg.ServersCount, cfg.TeamsCount,
-		cfg.TimeGeneratorType, cfg.Detectors)
+	gen := generator.New(client, cfg)
 	startTime := time.Now()
 	gen.Run()
 	timeElapsed := time.Since(startTime)
