@@ -385,10 +385,12 @@ func addDummyRectangle(event js.Object) {
 }
 
 func addDummyBookmark(evt js.Object, serverID int, alertID string) {
-	evtTime := time.Now()
-	datetime := evt.GetFieldAsTime("datetime", "2006-01-02T15:04:05")
-	evt["bookmark_time_datetime"] = datetime
-	evt["bookmark_time_utc"] = evtTime.UTC()
+	datetime := evt.GetField("datetime")
+	localTime, _ := datetime.(Time)
+	utctime := evt.GetField("time_utc")
+	utc, _ := utctime.(Time)
+	evt["bookmark_time_datetime"] = localTime
+	evt["bookmark_time_utc"] = utc
 	evt["bookmark_server_id"] = fmt.Sprintf("SERVER%d", serverID)
 	evt["bookmark_server_name"] = fmt.Sprintf("someServer%d", serverID)
 	evt["bookmark_camera_id"] = "SERVER0/DeviceIpint.1/SourceEndpoint.video:0:0"
@@ -411,8 +413,8 @@ func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 	evt["bookmark_geometry_ellipse_center_y"] = 4.0
 	evt["bookmark_geometry_ellipse_yr"] = 4.5
 	evt["bookmark_geometry_ellipse_xr"] = 4.5
-	evt["bookmark_range_time_begin"] = evtTime.UTC()
-	evt["bookmark_range_time_end"] = evtTime.Add(3 * time.Second).UTC()
+	evt["bookmark_range_time_begin"] = utc
+	evt["bookmark_range_time_end"] = Time{utc.Add(3 * time.Second)}
 }
 
 func enrichTime(event js.Object) {

@@ -51,12 +51,19 @@ func main() {
 
 	httpClient := http.NewClient(HttpURL)
 	defer func() {
+		if pgClient == nil {
+			return
+		}
 		if err := pgClient.Close(); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	defer func() {
+		if chClient == nil {
+			return
+		}
+
 		if err := chClient.Close(); err != nil {
 			log.Fatal(err)
 		}

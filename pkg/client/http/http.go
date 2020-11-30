@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	js "github.com/itimofeev/go-util/json"
@@ -25,7 +24,6 @@ func (c *Client) BulkInsert(items []js.Object) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode batch events: %+v", err)
 	}
-	log.Println("items", string(body))
 
 	response, err := http.Post(c.url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
