@@ -2,6 +2,7 @@ package db
 
 import (
 	js "github.com/itimofeev/go-util/json"
+	"github.com/matrosov-nikita/smart-generator/events"
 )
 
 type Event struct {
@@ -10,11 +11,11 @@ type Event struct {
 	TableName string
 }
 
-func ConvertEvents(events []js.Object) []Event {
-	dbEvents := make([]Event, 0, len(events))
+func ConvertEvents(eventsList []js.Object) []Event {
+	dbEvents := make([]Event, 0, len(eventsList))
 	var eventColumns []string
 	var tableName string
-	for _, event := range events {
+	for _, event := range eventsList {
 		eventType := event.GetFieldAsString("type")
 		switch eventType {
 		case "alert", "alert_state":
@@ -26,7 +27,13 @@ func ConvertEvents(events []js.Object) []Event {
 		}
 		values := make([]interface{}, 0, len(eventColumns))
 		for _, column := range eventColumns {
-			values = append(values, event[column])
+			columnValue := event[column]
+			switch v := columnValue.(type) {
+			case events.Time:
+				values = append(values, v.Time)
+			default:
+				values = append(values, v)
+			}
 		}
 
 		dbEvents = append(dbEvents, Event{

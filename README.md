@@ -17,4 +17,4 @@ startDate (default: 2020-01-01), endDate (default: now) - time range for events 
 generatorType (default: normal) - specifies how to generate time intervals between events, normal: equal intervals between events in time range
 between start end dates, random: picks random timestamps in time range between start and end dates
 
-storageType (default: all) - specifies which storage to use for saving events, possible values: clickhouse, postgres, all
+storageType (default: all) - specifies which storage to use for saving events, possible values: clickhouse, postgres, http, all

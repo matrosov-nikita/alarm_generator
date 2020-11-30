@@ -37,8 +37,7 @@ func NewGenerator(teamID string, domainID int) *Generator {
 }
 
 func (eg *Generator) CreateAlertEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -47,7 +46,7 @@ func (eg *Generator) CreateAlertEvent(values *EventValues) (js.Object, string) {
 	evt["version"] = 1
 	evt["type"] = "alert"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, false)
 	evt["initiator"] = "root"
 	evt["initiator_type"] = "AIT_USER"
@@ -63,9 +62,7 @@ func (eg *Generator) CreateAlertEvent(values *EventValues) (js.Object, string) {
 func (eg *Generator) CreateAlertEventState(values *EventValues) js.Object {
 	alertSeverities := []string{"True", "False", "Missed", "Suspicious"}
 	alertStateSeverity := alertSeverities[rand.Intn(len(alertSeverities))]
-
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	evt["id"] = uuid.New().String()
 	evt["version"] = 1
@@ -73,7 +70,7 @@ func (eg *Generator) CreateAlertEventState(values *EventValues) js.Object {
 	evt["team__id"] = eg.teamID
 	evt["type"] = "alert_state"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, false)
 	evt["severity"] = alertStateSeverity
 	evt["reviewer_type"] = "RT_USER"
@@ -86,8 +83,7 @@ func (eg *Generator) CreateAlertEventState(values *EventValues) js.Object {
 }
 
 func (eg *Generator) CreatePeopleEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -96,7 +92,7 @@ func (eg *Generator) CreatePeopleEvent(values *EventValues) (js.Object, string) 
 	evt["team__id"] = eg.teamID
 	evt["type"] = "detector"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	evt["detector_type"] = "People"
 	evt["detector_people_state"] = "in"
 	evt["phase"] = "happened"
@@ -106,8 +102,7 @@ func (eg *Generator) CreatePeopleEvent(values *EventValues) (js.Object, string) 
 }
 
 func (eg *Generator) CreateQueueDetectedEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -116,7 +111,7 @@ func (eg *Generator) CreateQueueDetectedEvent(values *EventValues) (js.Object, s
 	evt["team__id"] = eg.teamID
 	evt["type"] = "detector"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	evt["detector_type"] = "QueueDetected"
 	evt["detector_queue_max"] = 3
 	evt["detector_queue_min"] = 3
@@ -127,8 +122,7 @@ func (eg *Generator) CreateQueueDetectedEvent(values *EventValues) (js.Object, s
 }
 
 func (eg *Generator) CreateQueueLengthEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -137,7 +131,7 @@ func (eg *Generator) CreateQueueLengthEvent(values *EventValues) (js.Object, str
 	evt["team__id"] = eg.teamID
 	evt["type"] = "detector"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	evt["detector_type"] = "QueueLength"
 	evt["detector_queue_max"] = 3
 	evt["detector_queue_min"] = 3
@@ -148,8 +142,7 @@ func (eg *Generator) CreateQueueLengthEvent(values *EventValues) (js.Object, str
 }
 
 func (eg *Generator) CreatePlateRecognizedEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -158,19 +151,19 @@ func (eg *Generator) CreatePlateRecognizedEvent(values *EventValues) (js.Object,
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "plateRecognized"
 	evt["detector_lpr_country"] = "ru"
 	evt["detector_lpr_direction"] = 1
 	evt["detector_lpr_plate"] = values.Plate
 	evt["phase"] = "happened"
-	evt["detector_lpr_best_utc"] = values.RaiseTime.UTC()
+	evt["detector_lpr_best_utc"] = utc
 	evt["detector_lpr_begin_datetime"] = datetime
-	evt["detector_lpr_begin_utc"] = values.RaiseTime.UTC()
+	evt["detector_lpr_begin_utc"] = utc
 	evt["detector_lpr_begin_datetime"] = datetime
 	evt["detector_lpr_end_datetime"] = datetime
-	evt["detector_lpr_end_utc"] = values.RaiseTime.UTC()
+	evt["detector_lpr_end_utc"] = utc
 	addDummyRectangle(evt)
 	evt["recognition_quality"] = 0.45
 	enrichTime(evt)
@@ -178,8 +171,7 @@ func (eg *Generator) CreatePlateRecognizedEvent(values *EventValues) (js.Object,
 }
 
 func (eg *Generator) CreateListedLprEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -188,7 +180,7 @@ func (eg *Generator) CreateListedLprEvent(values *EventValues) (js.Object, strin
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "listed_lpr_detected"
 	evt["detector_lpr_plate"] = randString(8)
@@ -197,7 +189,7 @@ func (eg *Generator) CreateListedLprEvent(values *EventValues) (js.Object, strin
 	evt["detector_listedItem_item_id"] = uuid.New().String()
 	evt["detector_listedItem_matched_event_id"] = uuid.New().String()
 	evt["detector_listedItem_matched_event_time_datetime"] = datetime
-	evt["detector_listedItem_matched_event_time_utc"] = values.RaiseTime.UTC()
+	evt["detector_listedItem_matched_event_time_utc"] = utc
 
 	addDummyRectangle(evt)
 	enrichTime(evt)
@@ -205,8 +197,7 @@ func (eg *Generator) CreateListedLprEvent(values *EventValues) (js.Object, strin
 }
 
 func (eg *Generator) CreateListedFaceEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -215,7 +206,7 @@ func (eg *Generator) CreateListedFaceEvent(values *EventValues) (js.Object, stri
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "listed_face_detected"
 	evt["phase"] = "happened"
@@ -223,7 +214,7 @@ func (eg *Generator) CreateListedFaceEvent(values *EventValues) (js.Object, stri
 	evt["detector_listedItem_item_id"] = uuid.New().String()
 	evt["detector_listedItem_matched_event_id"] = uuid.New().String()
 	evt["detector_listedItem_matched_event_time_datetime"] = datetime
-	evt["detector_listedItem_matched_event_time_utc"] = values.RaiseTime.UTC()
+	evt["detector_listedItem_matched_event_time_utc"] = utc
 	evt["detector_listedFace_score"] = 0.5
 	addDummyRectangle(evt)
 	enrichTime(evt)
@@ -231,8 +222,7 @@ func (eg *Generator) CreateListedFaceEvent(values *EventValues) (js.Object, stri
 }
 
 func (eg *Generator) CreateBodyTemperatureEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -241,7 +231,7 @@ func (eg *Generator) CreateBodyTemperatureEvent(values *EventValues) (js.Object,
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "bodyTemperature"
 	evt["phase"] = "happened"
@@ -250,8 +240,7 @@ func (eg *Generator) CreateBodyTemperatureEvent(values *EventValues) (js.Object,
 }
 
 func (eg *Generator) CreatePeopleDistanceEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -260,7 +249,7 @@ func (eg *Generator) CreatePeopleDistanceEvent(values *EventValues) (js.Object, 
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "peopleDistance"
 	evt["phase"] = "happened"
@@ -269,8 +258,7 @@ func (eg *Generator) CreatePeopleDistanceEvent(values *EventValues) (js.Object, 
 }
 
 func (eg *Generator) CreateLotsObjectsEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -279,7 +267,7 @@ func (eg *Generator) CreateLotsObjectsEvent(values *EventValues) (js.Object, str
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "lotsObjects"
 	evt["phase"] = "happened"
@@ -288,8 +276,7 @@ func (eg *Generator) CreateLotsObjectsEvent(values *EventValues) (js.Object, str
 }
 
 func (eg *Generator) CreateFaceMaskAbsenceEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -298,7 +285,7 @@ func (eg *Generator) CreateFaceMaskAbsenceEvent(values *EventValues) (js.Object,
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "EvasionDetected"
 	evt["phase"] = "happened"
@@ -309,8 +296,7 @@ func (eg *Generator) CreateFaceMaskAbsenceEvent(values *EventValues) (js.Object,
 }
 
 func (eg *Generator) CreateEquipmentEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -319,7 +305,7 @@ func (eg *Generator) CreateEquipmentEvent(values *EventValues) (js.Object, strin
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = values.DetectorType
 	evt["phase"] = "happened"
@@ -329,8 +315,7 @@ func (eg *Generator) CreateEquipmentEvent(values *EventValues) (js.Object, strin
 }
 
 func (eg *Generator) CreateFaceAppearedEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -339,19 +324,19 @@ func (eg *Generator) CreateFaceAppearedEvent(values *EventValues) (js.Object, st
 	evt["team__id"] = eg.teamID
 	evt["type"] = "detector"
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "faceAppeared"
 	evt["detector_face_age"] = 34
 	evt["detector_face_gender"] = "male"
 	evt["detector_face_time_begin"] = datetime
-	evt["detector_face_time_begin_utc"] = values.RaiseTime.UTC()
+	evt["detector_face_time_begin_utc"] = utc
 	evt["detector_queue_max"] = 2
 	evt["recognition_quality"] = 0.45
 	evt["detector_listedItem_list_id"] = "bfefb72f-235a-414f-afe7-5303f9d2e50e"
 	evt["detector_listedItem_item_id"] = "7a9b3866-8901-4260-9826-470ce34c4219"
 	addDummyRectangle(evt)
-	evt["detector_listedItem_matched_event_time_utc"] = time.Date(2019, 9, 26, 9, 9, 9, 729000000, time.UTC)
+	evt["detector_listedItem_matched_event_time_utc"] = utc
 	evt["phase"] = "happened"
 	evt["multi_phase_id"] = uuid.New().String()
 	enrichTime(evt)
@@ -359,8 +344,7 @@ func (eg *Generator) CreateFaceAppearedEvent(values *EventValues) (js.Object, st
 }
 
 func (eg *Generator) CreateOneLineEvent(values *EventValues) (js.Object, string) {
-	evtTimeStr := values.RaiseTime.Format("2006-01-02T15:04:05.000000")
-	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	datetime, utc := timeToLocalAndUTCTimestamps(values.RaiseTime)
 	evt := js.NewObject()
 	id := uuid.New().String()
 	evt["id"] = id
@@ -369,7 +353,7 @@ func (eg *Generator) CreateOneLineEvent(values *EventValues) (js.Object, string)
 	evt["domain__id"] = eg.domainID
 	evt["team__id"] = eg.teamID
 	evt["datetime"] = datetime
-	evt["time_utc"] = values.RaiseTime.UTC()
+	evt["time_utc"] = utc
 	addDummySource(evt, values.ServerID, values.CameraID, true)
 	evt["detector_type"] = "oneLine"
 	evt["phase"] = "happened"
@@ -432,7 +416,8 @@ func addDummyBookmark(evt js.Object, serverID int, alertID string) {
 }
 
 func enrichTime(event js.Object) {
-	localTime := event.GetFieldAsTime("datetime", "2006-01-02T15:04:05")
+	datetime := event.GetField("datetime")
+	localTime, _ := datetime.(Time)
 	event.Put("weekday", strings.ToLower(localTime.Weekday().String()))
 	event.Put("year", localTime.Year())
 	event.Put("month", int(localTime.Month()))
@@ -440,8 +425,10 @@ func enrichTime(event js.Object) {
 	event.Put("time", localTime.Format("15:04:05.000"))
 	event.Put("hour", localTime.Hour())
 	event.Put("nanoseconds", localTime.Nanosecond())
-	event.Put("utc_nanoseconds", event.GetFieldAsTime("time_utc").Nanosecond())
 	_, utcOffset := localTime.Local().Zone()
+	utctime := event.GetField("time_utc")
+	utc, _ := utctime.(Time)
+	event.Put("utc_nanoseconds", utc.Nanosecond())
 	event.Put("utc_offset", utcOffset)
 
 	dayHour, dayMin, daySec := localTime.Clock()
@@ -468,4 +455,10 @@ func randString(n int) string {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 	return string(b)
+}
+
+func timeToLocalAndUTCTimestamps(raiseTime time.Time) (Time, Time) {
+	evtTimeStr := raiseTime.Local().Format("2006-01-02T15:04:05.000000")
+	datetime, _ := time.Parse("2006-01-02T15:04:05", evtTimeStr)
+	return Time{datetime}, Time{raiseTime.UTC()}
 }
